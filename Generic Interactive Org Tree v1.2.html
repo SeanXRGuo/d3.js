@@ -1,0 +1,2050 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style type="text/css">
+  
+	body {
+		font: 10px sans-serif;
+	}
+	
+	h {
+		font: 16px sans-serif;
+		font-weight: bold;
+	}
+	
+	label {
+		font: 12px sans-serif;
+		font-weight: bold;
+	}
+	
+	.search {
+		width: 100%;
+	}
+	
+	.node {
+		cursor: pointer;
+	}
+
+	.overlay{
+		background-color:#EEE;
+	}
+   
+	.node circle {
+		fill: #fff;
+		stroke: steelblue;
+		stroke-width: 1.5px;
+	}
+   
+	.node text {
+		font-size:10px; 
+		font-family:sans-serif;
+	}
+   
+	.link {
+		fill: none;
+		stroke: #ccc;
+		stroke-width: 1.5px;
+	}
+
+	.templink {
+		fill: none;
+		stroke: red;
+		stroke-width: 3px;
+	}
+
+	.ghostCircle.show{
+		display:block;
+	}
+
+	.ghostCircle, .activeDrag .ghostCircle{
+		display: none;
+	}
+  
+	.d3-tip {
+		line-height: 1;
+		font-weight: bold;
+		padding: 12px;
+		background: rgba(0, 0, 0, 0.8);
+		color: #fff;
+		border-radius: 2px;
+		font-size: 12px;
+	}
+
+	/* Creates a small triangle extender for the tooltip */
+	.d3-tip:after {
+		box-sizing: border-box;
+		display: inline;
+		font-size: 10px;
+		width: 100%;
+		line-height: 1;
+		color: rgba(0, 0, 0, 0.8);
+		content: "\25BC";
+		position: absolute;
+		text-align: center;
+	}
+
+	/* Style northward tooltips differently */
+	.d3-tip.n:after {
+		margin: -1px 0 0 0;
+		top: 100%;
+		left: 0;
+	}
+	
+	.popupBlock {
+		position:absolute;
+		top: 0px;
+		left: 0px;
+		width: 100%;
+		height: 100%;
+		display: none;
+		background-color: rgba(0,0,0,0.5);
+	}
+	
+	.popupPanel {
+		background-color: white;
+		z-index: 1;
+		border-radius: 10px;
+		width: 230px;
+		height: 280px;
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		margin: auto;
+	}
+	
+	.popupItem {
+		padding: 10px 10px 10px 10px;
+	}
+	
+	.leftPanel {
+		top:5px;
+		left:5px;
+		position:absolute;
+		width: 300px;
+	}
+	
+	.legendControlSwitch {
+		border-radius: 10px;
+		background: #FFE;
+		width: 50%;
+		margin:0 auto;
+	}
+	
+	.legendPanel {
+		border-radius: 10px;
+		background: #EEE;
+	}
+	
+	.controlPanel {
+		border-radius: 10px;
+		background: lightblue;
+	}
+	
+	.statPanel {
+		margin-top: 5px;
+		border-radius: 10px;
+		background: lightgray;
+	}
+	
+	.item {
+		padding: 5px 5px 5px 5px;
+	}
+	
+	<!-- Load file test -->
+	#progress_bar {
+		margin: 10px 0;
+		padding: 3px;
+		border: 1px solid #000;
+		font-size: 14px;
+		clear: both;
+		opacity: 0;
+		-moz-transition: opacity 1s linear;
+		-o-transition: opacity 1s linear;
+		-webkit-transition: opacity 1s linear;
+	  }
+	  #progress_bar.loading {
+		opacity: 1.0;
+	  }
+	  #progress_bar .percent {
+		background-color: #99ccff;
+		height: auto;
+		width: 0;
+	  }
+
+</style>
+
+<link rel="stylesheet" type="text/css" href="http://cdnjs.cloudflare.com/ajax/libs/select2/3.5.0/select2.min.css"></link>
+<script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/select2/3.5.0/select2.min.js"></script>
+<link rel="icon" href="https://pbs.twimg.com/profile_images/2147903516/AM_logo_twitter.jpg">
+
+
+<!--<link rel="stylesheet" type="text/css" href="select2.min.css"></link>
+<script src="jquery-1.10.2.min.js"></script>
+<script src="d3.v3.min.js"></script>
+<script src="d3.tip.v0.6.3.js"></script>
+<script src="jquery-ui.js"></script>
+<script type="text/javascript" src="select2.min.js"></script>
+<link rel="icon" href="https://pbs.twimg.com/profile_images/2147903516/AM_logo_twitter.jpg">-->
+
+<body>
+	<div class="leftPanel">
+		<div class="legendControlSwitch">
+			<div class="item"><button type="button" id="switch" onclick="_switch()" style="width:100%">Legend / Control</button></div>
+		</div>
+		<div class="legendPanel" id="legendP">
+			<div class="item"><h>Legend</h></div>
+			<div class="item">
+				<img src="Legend.png" alt="Legend" width="250px">
+			</div>
+		</div>
+		<div class="controlPanel" id="controlP" style="display:none">
+			<div class="item"><h>Control Panel</h></div>
+			<div class="item">
+				<label>Tooltips (Node): </label>
+				<div>
+					<input type="checkbox" id="nameCB" checked>Name</input>
+					<input type="checkbox" id="titleCB" checked>Title</input>
+					<input type="checkbox" id="salaryCB" checked>Salary</input>
+					<input type="checkbox" id="performanceCB" checked>Performance</input><br/>
+					<input type="checkbox" id="numOfReportCB" checked># of Reports</input>
+					<input type="checkbox" id="spanCB" checked>Span</input>
+					<input type="checkbox" id="layerCB" checked>Layer</input>
+				</div>
+			</div>
+			<div class="item">
+				<label>Display Options: </label>
+				<div>
+					<input type="checkbox" id="showRIFs" checked onchange="_toggleShowRIFs()">Show RIFs</input>
+				</div>
+				<button type="button" id="expandAll" onclick="_expandAll()">Expand All</button>
+				<button type="button" id="collapseAll" onclick="_collapseAll()">Collapse All</button>
+			</div>
+			<div class="item">
+				<label>Start Over with a New Tree:</label>
+				<input type="file" id="files" name="file" style="width:200px"/>
+				<button onclick="abortRead();">Cancel read</button>
+				<div id="progress_bar"><div class="percent">0%</div></div>
+				<div>
+					Tree: <textarea cols="20" rows="2" id="treeText"></textarea>
+					<br/>
+					Root ID: <input type="text" id="rootText"></input>
+					<br/>
+					<div>
+						<form>
+							<input type="radio" name="format" id="csv" checked>csv
+							<input type="radio" name="format" id="json">json
+						</form>
+					</div>
+					<button type="button" id="importTreeBtn" onclick="importTree()">Start Over</button>
+					<button type="button" id="exportTreeBtn" onclick="exportTree()">Export Tree</button>
+				</div>
+			</div>
+			<div class="item">
+				<label>Action Manager:</label>
+				<div>
+					Actions: <textarea cols="20" rows="2" id="actionText"></textarea>
+					<br/>
+					<button type="button" id="importTreeBtn" onclick="importActions()">Import</button>
+					<button type="button" id="exportTreeBtn" onclick="exportActions()">Export Actions</button>
+					<br/><br/>
+					Name Your Action: <input type="text" id="imgName" style="width:100px" maxlength="10" />
+					<button type="button" id="saveTreeBtn" onclick="_saveToImage()">Save</button>
+					<br/>
+					Load Actions:
+					<select id="savedTreeImage">
+						<option value="census">census</option>
+					</select>
+					<button type="button" id="loadTreeBtn" onclick="revertToImage()">Load</button>
+					<br/>
+					Load Baseline:
+					<select id="savedBaseline">
+						<option value="census">census</option>
+					</select>
+					<button type="button" id="loadBaselineBtn" onclick="changeBaseline()">Load</button>
+				</div>
+			</div>
+			<div class="item">
+				<label>Actions:</label>
+				<div>
+					<button type="button" id="undoBtn" onclick="undo()">Undo</button>
+					<button type="button" id="redoBtn" onclick="redo()">Redo</button>
+				</div>
+			</div>
+			<div class="item">
+				<label>See it Moving!</label>
+				<div>
+					<form>
+						<input type="radio" name="speed" id="instant" checked>Instant
+						<input type="radio" name="speed" id="fast">Fast
+						<input type="radio" name="speed" id="slow">Slow
+					</form>
+				</div>
+				<div>
+					<button type="button" id="initBtn" onclick="toInit()">To Initial State</button>
+					<button type="button" id="futureBtn" onclick="toFuture()">To Future State</button>
+					<button type="button" id="pauseBtn" onclick="pause()">Pause</button>
+				</div>
+			</div>
+			<div class="item">
+				<label for="male">Search Node: </label>
+				<div id="search"></div>
+			</div>
+		</div>
+		<div class="statPanel">
+			<div class="item"><h>Statistics Panel</h> (Baseline -> Current State)</div>
+			<div class="item">
+				<label># of Employees/Positions:</label>
+				<div id="totalHeadcount">0</div>
+			</div>
+			<div class="item">
+				<label>Total Payroll ($):</label>
+				<div id="totalPayroll">0</div>
+			</div>
+			<div class="item">
+				<label># of Managers:</label>
+				<div id="totalManager">0</div>
+			</div>
+			<div class="item">
+				<label>Average Span (of Managers):</label>
+				<div id="avgSpan">0</div>
+			</div>
+			<div class="item">
+				<label># of Report Lines:</label>
+				<div id="totalReportLine">0</div>
+			</div>
+			<div class="item">
+				<label>Average Layers (of Report Lines):</label>
+				<div id="avgLayer">0</div>
+			</div>
+		</div>
+	</div>
+    <div id="tree-container" style="top:5px; left:310px; position:absolute"></div>
+	<div id="new-node-inputs" class="popupBlock">
+		<div class="popupPanel">
+			<div class="popupItem">
+				<label>Change Info:</label><br/>
+				<div style="text-align: right;">
+					Name:	<input type="text" id="nameOText" /><br />
+					Title:	<input type="text" id="titleOText" /><br />
+					Salary:	<input type="text" id="salaryOText" /><br />
+					<br />
+					<button type="button" id="changeBtn" onclick="changeNode()">Change</button>
+					<button type="button" id="cancelBtn" onclick="cancelNewNode()">Cancel</button>
+				</div>
+				<br />
+				<label>Add Direct Report:</label><br/>
+				<div style="text-align: right;">
+					Name:	<input type="text" id="nameText" /><br />
+					Title:	<input type="text" id="titleText" /><br />
+					Salary:	<input type="text" id="salaryText" /><br />
+					<br />
+					<button type="button" id="addBtn" onclick="newNode()">Add</button>
+					<button type="button" id="cancelBtn" onclick="cancelNewNode()">Cancel</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+
+<script>
+
+// DATA
+{
+baseData = 
+{"EmpID":"29","EmpName":"P29","Title":"President and Chief Executive Officer","Salary":"575000","Performance":"75","SalaryBenchmark":"551200","count":"1","children":[{"EmpID":"28","EmpName":"P28","Title":"Senior Vice President, Research and Training","Salary":"335000","Performance":"77","SalaryBenchmark":"284268.8555","count":"1","children":[{"EmpID":"10","EmpName":"P10","Title":"Director, Stroke Rehabilitation Research","Salary":"270000","Performance":"82","SalaryBenchmark":"314347.6253","count":"1","children":[{"EmpID":"16","EmpName":"P16","Title":"Research Scientist","Salary":"70000","Performance":"40","SalaryBenchmark":"110970.263","count":"1"},{"EmpID":"20","EmpName":"P20","Title":"Research Scientist","Salary":"100000","Performance":"59","SalaryBenchmark":"71765.304","count":"1"},{"EmpID":"65","EmpName":"P65","Title":"Research Coordinator","Salary":"80000","Performance":"89","SalaryBenchmark":"101337.6","count":"1","children":[{"EmpID":"11","EmpName":"P11","Title":"Research Assistant","Salary":"35000","Performance":"89","SalaryBenchmark":"37128.832","count":"1"},{"EmpID":"12","EmpName":"P12","Title":"Research Assistant","Salary":"45000","Performance":"84","SalaryBenchmark":"18636.8","count":"1"},{"EmpID":"52","EmpName":"P52","Title":"Research Assistant","Salary":"40000","Performance":"100","SalaryBenchmark":"38701.52","count":"1"},{"EmpID":"79","EmpName":"P79","Title":"Research Assistant","Salary":"45000","Performance":"46","SalaryBenchmark":"26334.48064","count":"1"}]}]},{"EmpID":"111","EmpName":"P111","Title":"Director, Human Performance and Engineering Research","Salary":"255000","Performance":"66","SalaryBenchmark":"196542.659","count":"1","children":[{"EmpID":"1","EmpName":"P1","Title":"Research Scientist","Salary":"95000","Performance":"98","SalaryBenchmark":"92800.17552","count":"1","children":[{"EmpID":"24","EmpName":"P24","Title":"Postdoctoral Fellow","Salary":"50000","Performance":"86","SalaryBenchmark":"47699.96608","count":"1"},{"EmpID":"48","EmpName":"P48","Title":"Biomedical Engineer","Salary":"45000","Performance":"61","SalaryBenchmark":"35200.0896","count":"1"},{"EmpID":"97","EmpName":"P97","Title":"Associate Research Scientist","Salary":"55000","Performance":"80","SalaryBenchmark":"76960","count":"1"}]},{"EmpID":"23","EmpName":"P23","Title":"Senior Administrative Assistant","Salary":"50000","Performance":"65","SalaryBenchmark":"38686.1384","count":"1"},{"EmpID":"34","EmpName":"P34","Title":"Associate Director","Salary":"120000","Performance":"37","SalaryBenchmark":"65508.13568","count":"1","children":[{"EmpID":"107","EmpName":"P107","Title":"Physical Therapist","Salary":"150000","Performance":"96","SalaryBenchmark":"118367.6","count":"1"},{"EmpID":"38","EmpName":"P38","Title":"Physical Therapist","Salary":"120000","Performance":"36","SalaryBenchmark":"68649.43904","count":"1"},{"EmpID":"84","EmpName":"P84","Title":"Senior Engineer","Salary":"70000","Performance":"90","SalaryBenchmark":"103251.5037","count":"1","children":[{"EmpID":"6","EmpName":"P6","Title":"Research Assistant","Salary":"40000","Performance":"63","SalaryBenchmark":"39085.28","count":"1"}]}]},{"EmpID":"50","EmpName":"P50","Title":"Research Scientist","Salary":"75000","Performance":"52","SalaryBenchmark":"63017.54784","count":"1","children":[{"EmpID":"62","EmpName":"P62","Title":"Research Assistant","Salary":"35000","Performance":"74","SalaryBenchmark":"34944","count":"1"}]},{"EmpID":"64","EmpName":"P64","Title":"Research Coordinator","Salary":"50000","Performance":"36","SalaryBenchmark":"55472.1024","count":"1"},{"EmpID":"76","EmpName":"P76","Title":"Senior Research Scientist","Salary":"105000","Performance":"76","SalaryBenchmark":"112700.0368","count":"1","children":[{"EmpID":"105","EmpName":"P105","Title":"Research Coordinator","Salary":"30000","Performance":"60","SalaryBenchmark":"36495.0976","count":"1"},{"EmpID":"2","EmpName":"P2","Title":"Biomedical Engineer","Salary":"55000","Performance":"40","SalaryBenchmark":"45500.0728","count":"1"},{"EmpID":"21","EmpName":"P21","Title":"Research Coordinator","Salary":"45000","Performance":"53","SalaryBenchmark":"62448.99024","count":"1"},{"EmpID":"33","EmpName":"P33","Title":"Biomedical Engineer","Salary":"45000","Performance":"37","SalaryBenchmark":"70699.40592","count":"1"},{"EmpID":"4","EmpName":"P4","Title":"Associate Research Scientist","Salary":"40000","Performance":"82","SalaryBenchmark":"34840","count":"1"},{"EmpID":"49","EmpName":"P49","Title":"Research Assistant","Salary":"25000","Performance":"34","SalaryBenchmark":"39199.94624","count":"1"},{"EmpID":"5","EmpName":"P5","Title":"Biomedical Engineer","Salary":"45000","Performance":"95","SalaryBenchmark":"57500.092","count":"1"},{"EmpID":"85","EmpName":"P85","Title":"Research Assistant","Salary":"30000","Performance":"34","SalaryBenchmark":"49700.2272","count":"1"}]},{"EmpID":"8","EmpName":"P8","Title":"Senior Research Scientist","Salary":"110000","Performance":"48","SalaryBenchmark":"135123.431","count":"1","children":[{"EmpID":"69","EmpName":"P69","Title":"Biomedical Engineer","Salary":"35000","Performance":"63","SalaryBenchmark":"49820.10176","count":"1"},{"EmpID":"72","EmpName":"P72","Title":"Postdoctoral Fellow","Salary":"50000","Performance":"27","SalaryBenchmark":"43000.0688","count":"1"}]},{"EmpID":"86","EmpName":"P86","Title":"Associate Research Scientist","Salary":"40000","Performance":"88","SalaryBenchmark":"44500.0712","count":"1"}]},{"EmpID":"22","EmpName":"P22","Title":"Director, Neuropsychology & Neuroscience and Traumatic Brain Injury Research","Salary":"220000","Performance":"66","SalaryBenchmark":"218826.3168","count":"1","children":[{"EmpID":"104","EmpName":"P104","Title":"Postdoctoral Fellow","Salary":"45000","Performance":"85","SalaryBenchmark":"44550.17424","count":"1"},{"EmpID":"109","EmpName":"P109","Title":"Assoicate Director, Neuroimaging Center","Salary":"135000","Performance":"30","SalaryBenchmark":"139713.6","count":"1","children":[{"EmpID":"110","EmpName":"P110","Title":"Physicist/Manager","Salary":"120000","Performance":"35","SalaryBenchmark":"167078.1112","count":"1","children":[{"EmpID":"108","EmpName":"P108","Title":"Research Assistant","Salary":"30000","Performance":"86","SalaryBenchmark":"42835.1456","count":"1"},{"EmpID":"99","EmpName":"P99","Title":"MR Technologist","Salary":"60000","Performance":"66","SalaryBenchmark":"61200.09792","count":"1"}]},{"EmpID":"40","EmpName":"P40","Title":"Senior Research Scientist","Salary":"105000","Performance":"34","SalaryBenchmark":"81450.6888","count":"1"}]},{"EmpID":"17","EmpName":"P17","Title":"Assistant Director","Salary":"110000","Performance":"44","SalaryBenchmark":"104618.8083","count":"1","children":[{"EmpID":"56","EmpName":"P56","Title":"Research Scientist","Salary":"85000","Performance":"68","SalaryBenchmark":"47604.71872","count":"1"},{"EmpID":"59","EmpName":"P59","Title":"Research Scientist","Salary":"85000","Performance":"37","SalaryBenchmark":"72985.77312","count":"1"}]},{"EmpID":"39","EmpName":"P39","Title":"Administrative Assistant","Salary":"30000","Performance":"60","SalaryBenchmark":"55405.948","count":"1"},{"EmpID":"55","EmpName":"P55","Title":"Research Scientist","Salary":"75000","Performance":"40","SalaryBenchmark":"66723.41312","count":"1"},{"EmpID":"71","EmpName":"P71","Title":"Research Manager","Salary":"105000","Performance":"44","SalaryBenchmark":"137178.7331","count":"1","children":[{"EmpID":"103","EmpName":"P103","Title":"Research/Administrative Coordinator","Salary":"70000","Performance":"36","SalaryBenchmark":"80960.35584","count":"1","children":[{"EmpID":"100","EmpName":"P100","Title":"Research Assistant","Salary":"30000","Performance":"72","SalaryBenchmark":"45246.46464","count":"1"},{"EmpID":"102","EmpName":"P102","Title":"Research Assistant","Salary":"40000","Performance":"84","SalaryBenchmark":"46865.1456","count":"1"},{"EmpID":"14","EmpName":"P14","Title":"Research Assistant","Salary":"35000","Performance":"86","SalaryBenchmark":"37826.86752","count":"1"},{"EmpID":"19","EmpName":"P19","Title":"Research Assistant","Salary":"30000","Performance":"94","SalaryBenchmark":"27493.36512","count":"1"},{"EmpID":"26","EmpName":"P26","Title":"Research Assistant","Salary":"30000","Performance":"55","SalaryBenchmark":"18020.05088","count":"1"},{"EmpID":"37","EmpName":"P37","Title":"Research Assistant","Salary":"35000","Performance":"73","SalaryBenchmark":"26268.83584","count":"1"},{"EmpID":"60","EmpName":"P60","Title":"Research Assistant","Salary":"40000","Performance":"28","SalaryBenchmark":"33475.104","count":"1"},{"EmpID":"77","EmpName":"P77","Title":"Research Assistant","Salary":"40000","Performance":"42","SalaryBenchmark":"24515.64544","count":"1"},{"EmpID":"78","EmpName":"P78","Title":"Research Assistant","Salary":"30000","Performance":"94","SalaryBenchmark":"34144.60608","count":"1"},{"EmpID":"89","EmpName":"P89","Title":"Research Assistant","Salary":"40000","Performance":"35","SalaryBenchmark":"35349.95152","count":"1"},{"EmpID":"92","EmpName":"P92","Title":"Research Assistant","Salary":"40000","Performance":"79","SalaryBenchmark":"19800.0192","count":"1"},{"EmpID":"93","EmpName":"P93","Title":"Research Assistant","Salary":"30000","Performance":"33","SalaryBenchmark":"28560.08064","count":"1"},{"EmpID":"98","EmpName":"P98","Title":"Research Assistant","Salary":"30000","Performance":"42","SalaryBenchmark":"32654.7936","count":"1"}]},{"EmpID":"91","EmpName":"P91","Title":"Research Coordinator","Salary":"60000","Performance":"80","SalaryBenchmark":"37272.3416","count":"1","children":[{"EmpID":"113","EmpName":"P113","Title":"Research Assistant","Salary":"25000","Performance":"90","SalaryBenchmark":"45560.08704","count":"1"},{"EmpID":"114","EmpName":"P114","Title":"Research Assistant","Salary":"35000","Performance":"26","SalaryBenchmark":"44316.48","count":"1"},{"EmpID":"13","EmpName":"P13","Title":"Research Assistant","Salary":"35000","Performance":"74","SalaryBenchmark":"35818.36128","count":"1"},{"EmpID":"25","EmpName":"P25","Title":"Research Assistant","Salary":"40000","Performance":"72","SalaryBenchmark":"25675","count":"1"},{"EmpID":"45","EmpName":"P45","Title":"Research Assistant","Salary":"30000","Performance":"59","SalaryBenchmark":"21120.02048","count":"1"},{"EmpID":"46","EmpName":"P46","Title":"Research Assistant","Salary":"30000","Performance":"61","SalaryBenchmark":"43225","count":"1"},{"EmpID":"58","EmpName":"P58","Title":"Research Assistant","Salary":"40000","Performance":"61","SalaryBenchmark":"33250.152","count":"1"},{"EmpID":"68","EmpName":"P68","Title":"Research Assistant","Salary":"45000","Performance":"22","SalaryBenchmark":"41480.11712","count":"1"},{"EmpID":"70","EmpName":"P70","Title":"Research Assistant","Salary":"35000","Performance":"30","SalaryBenchmark":"51155.208","count":"1"}]}]},{"EmpID":"95","EmpName":"P95","Title":"Senior Research Scientist","Salary":"95000","Performance":"91","SalaryBenchmark":"122007.5376","count":"1"}]},{"EmpID":"32","EmpName":"P32","Title":"Director, Spinal Cord Injury and Outcomes & Assessment Research","Salary":"160000","Performance":"63","SalaryBenchmark":"111994.5715","count":"1","children":[{"EmpID":"112","EmpName":"P112","Title":"Senior Research Scientist","Salary":"100000","Performance":"64","SalaryBenchmark":"73558.81728","count":"1"},{"EmpID":"15","EmpName":"P15","Title":"Senior Research Scientist","Salary":"95000","Performance":"62","SalaryBenchmark":"55369.49184","count":"1","children":[{"EmpID":"51","EmpName":"P51","Title":"Research Assistant","Salary":"30000","Performance":"45","SalaryBenchmark":"25492.584","count":"1"}]},{"EmpID":"18","EmpName":"P18","Title":"Research Coordinator","Salary":"55000","Performance":"80","SalaryBenchmark":"54637.024","count":"1"},{"EmpID":"36","EmpName":"P36","Title":"Senior Research Scientist","Salary":"95000","Performance":"25","SalaryBenchmark":"68600.0224","count":"1","children":[{"EmpID":"82","EmpName":"P82","Title":"Research Coordinator","Salary":"45000","Performance":"63","SalaryBenchmark":"35844.01392","count":"1"}]}]},{"EmpID":"43","EmpName":"P43","Title":"Institutional Review Board (IRB)","Salary":"425000","Performance":"100","SalaryBenchmark":"458265.6","count":"1"},{"EmpID":"63","EmpName":"P63","Title":"Associate Research Scientist","Salary":"45000","Performance":"90","SalaryBenchmark":"33990.11616","count":"1"},{"EmpID":"66","EmpName":"P66","Title":"Executive Assistant","Salary":"50000","Performance":"90","SalaryBenchmark":"60800.16384","count":"1"},{"EmpID":"80","EmpName":"P80","Title":"Director, Employment and Disability Research","Salary":"185000","Performance":"47","SalaryBenchmark":"178409.4603","count":"1","children":[{"EmpID":"57","EmpName":"P57","Title":"Research Assistant","Salary":"50000","Performance":"87","SalaryBenchmark":"55479.90656","count":"1"}]},{"EmpID":"87","EmpName":"P87","Title":"Associate Research Scientist","Salary":"45000","Performance":"85","SalaryBenchmark":"59000.0944","count":"1"}]},{"EmpID":"3","EmpName":"P3","Title":"Senior Vice President and Chief Financial Officer","Salary":"295000","Performance":"90","SalaryBenchmark":"312000","count":"1","children":[{"EmpID":"101","EmpName":"P101","Title":"Director, Human Resources","Salary":"115000","Performance":"61","SalaryBenchmark":"124800","count":"1"},{"EmpID":"54","EmpName":"P54","Title":"Finance Assistant/Receptionist","Salary":"55000","Performance":"41","SalaryBenchmark":"52578.64768","count":"1"},{"EmpID":"73","EmpName":"P73","Title":"Executive Assistant and Board Liaison","Salary":"65000","Performance":"64","SalaryBenchmark":"53345.76","count":"1"},{"EmpID":"74","EmpName":"P74","Title":"Controller","Salary":"100000","Performance":"42","SalaryBenchmark":"101983.3214","count":"1","children":[{"EmpID":"35","EmpName":"P35","Title":"Senior Accountant","Salary":"70000","Performance":"21","SalaryBenchmark":"79297.11504","count":"1"},{"EmpID":"44","EmpName":"P44","Title":"Purchasing Administrator","Salary":"60000","Performance":"28","SalaryBenchmark":"57924.06048","count":"1"}]}]},{"EmpID":"42","EmpName":"P42","Title":"Director, Operations and Grants Administration","Salary":"145000","Performance":"88","SalaryBenchmark":"182724.8696","count":"1","children":[{"EmpID":"106","EmpName":"P106","Title":"Manager, Grants Administration and Clinical Trials","Salary":"100000","Performance":"34","SalaryBenchmark":"67558.4","count":"1"},{"EmpID":"27","EmpName":"P27","Title":"Medical Librarian","Salary":"45000","Performance":"98","SalaryBenchmark":"52785.13344","count":"1"},{"EmpID":"30","EmpName":"P30","Title":"IRB Manager","Salary":"70000","Performance":"90","SalaryBenchmark":"87020.57728","count":"1","children":[{"EmpID":"90","EmpName":"P90","Title":"IRB Coordinator","Salary":"55000","Performance":"33","SalaryBenchmark":"68545.568","count":"1"}]},{"EmpID":"31","EmpName":"P31","Title":"Chief Information Officer","Salary":"185000","Performance":"100","SalaryBenchmark":"156780","count":"1","children":[{"EmpID":"61","EmpName":"P61","Title":"Network Engineer","Salary":"85000","Performance":"46","SalaryBenchmark":"55909.83424","count":"1"},{"EmpID":"67","EmpName":"P67","Title":"Web Programmer/Designer","Salary":"80000","Performance":"45","SalaryBenchmark":"66131.5928","count":"1"},{"EmpID":"83","EmpName":"P83","Title":"Network Engineer","Salary":"100000","Performance":"70","SalaryBenchmark":"119982.2957","count":"1"}]},{"EmpID":"94","EmpName":"P94","Title":"Research Recruitment Specialist","Salary":"45000","Performance":"76","SalaryBenchmark":"35550.13904","count":"1"}]},{"EmpID":"53","EmpName":"P53","Title":"Senior Vice President, Grants and Communications","Salary":"155000","Performance":"79","SalaryBenchmark":"166400","count":"1","children":[{"EmpID":"75","EmpName":"P75","Title":"Communications Manager","Salary":"110000","Performance":"57","SalaryBenchmark":"72815.39616","count":"1","children":[{"EmpID":"47","EmpName":"P47","Title":"Communications Strategist","Salary":"70000","Performance":"31","SalaryBenchmark":"102240.0454","count":"1"},{"EmpID":"7","EmpName":"P7","Title":"Videographer","Salary":"80000","Performance":"46","SalaryBenchmark":"94238.7264","count":"1"}]}]},{"EmpID":"81","EmpName":"P81","Title":"Chief Development Officer","Salary":"185000","Performance":"73","SalaryBenchmark":"197600","count":"1","children":[{"EmpID":"41","EmpName":"P41","Title":"Manager, Annual Giving and Special Events","Salary":"80000","Performance":"63","SalaryBenchmark":"89666.928","count":"1","children":[{"EmpID":"9","EmpName":"P9","Title":"Development Assistant","Salary":"20000","Performance":"31","SalaryBenchmark":"39234.62816","count":"1"}]},{"EmpID":"96","EmpName":"P96","Title":"Development Coordinator","Salary":"40000","Performance":"72","SalaryBenchmark":"30610.4344","count":"1"}]},{"EmpID":"88","EmpName":"P88","Title":"Assistant to the President & CEO","Salary":"55000","Performance":"73","SalaryBenchmark":"66842.88","count":"1"}]}
+}
+
+	// Save the original copy of base data
+	curTree = JSON.parse(JSON.stringify(baseData));
+	
+	// Functions //
+	// By Meng Xie
+	function tooltipOnNode(d) {
+		var html = "";
+
+		if($("#nameCB").is(':checked')) html = html + "<i style='color:#cfcfcf'>Name:</i> " + d.EmpName + "<br />";
+		if($("#titleCB").is(':checked')) html = html + "<i style='color:#cfcfcf'>Title:</i> " + d.Title + "<br />";
+		if($("#salaryCB").is(':checked')) {
+			html = html + "<i style='color:#cfcfcf'>Salary:</i> " + "$ " + d3.format(",.0f")(d.Salary) + " (";
+			if (d.Salary/d.SalaryBenchmark <= 1.2) html += "<span style='color:green'>"
+			else html += "<span style='color:red'>"
+			html = html +d3.format(",.2f")(d.Salary/d.SalaryBenchmark*100)+"%</span> of benchmark at $ " + d3.format(",.0f")(d.SalaryBenchmark) + ")" + "<br />";
+//			if (d._children) {
+				// collapsed
+//				html = html + "<i style='color:#cfcfcf'>Avg. Salary:</i> " + "$ " + d3.format(",.2f")(getSalaryRollup(d)/getSize(d)) + " (";
+//				if (getSalaryRollup(d)/getSalaryBenchmarkRollup(d) <= 1.2) html += "<span style='color:green'>"
+//				else html += "<span style='color:red'>"
+//				html = html +d3.format(",.2f")(getSalaryRollup(d)/getSalaryBenchmarkRollup(d)*100)+"%</span> of benchmark at $ " + d3.format(",.2f")(getSalaryBenchmarkRollup(d)/getSize(d)) + ")" + "<br />";
+//			} else {
+//				html = html + "<i style='color:#cfcfcf'>Salary:</i> " + "$ " + d3.format(",.0f")(d.Salary) + " (";
+//				if (d.Salary/d.SalaryBenchmark <= 1.2) html += "<span style='color:green'>"
+//				else html += "<span style='color:red'>"
+//				html = html +d3.format(",.2f")(d.Salary/d.SalaryBenchmark*100)+"%</span> of benchmark at $ " + d3.format(",.0f")(d.SalaryBenchmark) + ")" + "<br />";
+//			}
+		}
+		if($("#performanceCB").is(':checked')) {
+			html = html + "<i style='color:#cfcfcf'>Performance:</i> ";
+			if (d.Performance <= 60) html += "<span style='color:red'>"
+			else html += "<span style='color:green'>"
+			html = html + d3.format(",.0f")(d.Performance) + "</span><br />";
+//			if (d._children) {
+//				// collapsed
+//				html = html + "<i style='color:#cfcfcf'>Avg. Performance:</i> ";
+//				if (getPerformanceRollup(d)/getSize(d) <= 60) html += "<span style='color:red'>"
+//				else html += "<span style='color:green'>"
+//				html = html + d3.format(",.2f")(getPerformanceRollup(d)/getSize(d)) + "</span><br />";
+//			} else {
+//				html = html + "<i style='color:#cfcfcf'>Performance:</i> ";
+//				if (d.Performance <= 60) html += "<span style='color:red'>"
+//				else html += "<span style='color:green'>"
+//				html = html + d3.format(",.0f")(d.Performance) + "</span><br />";
+//			}
+		}
+		if($("#numOfReportCB").is(':checked')) html = html + "<i style='color:#cfcfcf'># of Reports:</i> " + d3.format(",.0f")(d.Size) + "<br />";
+		if($("#spanCB").is(':checked')) html = html + "<i style='color:#cfcfcf'>Span:</i> " + d3.format(",.0f")(d.Span) + "<br />";
+		if($("#layerCB").is(':checked')) html = html + "<i style='color:#cfcfcf'>Layer:</i> " + d3.format(",.0f")(d.Layer) + "<br />";
+		
+		if (html) {
+			html = html.substring(0,html.length-6);
+			return html;
+		}
+		else return "<i style='color:#cfcfcf'>Name:</i> <span style='color:red'>" + d.name + "</span>";
+	}
+	
+	function jsonToCsv(data, fields) {
+		var output = "";
+		for (var key in fields) {
+			output += fields[key] + "\t";
+		}
+		output += "\n";
+		nodes = tree.nodes(data).reverse();
+		nodes.forEach(function(d) {
+			for (var i in fields) {
+				var key = fields[i];
+				if (key in d) {
+					if (key == "parent") output += d[key].EmpID;
+					else output += d[key];
+				}
+				output += "\t";
+			}
+			output += "\n";
+		});
+		return output;
+	}
+	
+	function csvToJson(data) {
+		var output = {};
+		var raw = data.split("\n");
+		if (raw.length <= 0 || raw[0] == "") return;
+		var fields = raw[0].trim().split('\t');
+		
+		// Construct object dictionary
+		var oDic = {};
+		for (var i=0; i<raw.length; i++){
+			if (i > 0 && raw[i].trim()) {
+				var values = raw[i].trim().split('\t');
+				var innerDic = {};
+				var oKey = null;
+				for (var j=0; j<fields.length; j++){
+					if (fields[j] == "parent") {
+						// This is the key
+						if (!values[j]) oKey = "root";
+						else oKey = values[j];
+					} else {
+						innerDic[fields[j]] = values[j];
+					}
+				}
+				// Append if exists, otherwise add
+				if (oKey in oDic) oDic[oKey].push(innerDic);
+				else oDic[oKey] = [innerDic];
+			}
+		}
+		
+		for (var p in oDic) {
+			if (p == "root") {
+				if (oDic[p].length == 1) output = oDic[p][0];
+				else {
+					alert("Multiple roots! Invalid!");
+					return;
+				}
+			}
+			for(var i in oDic[p]) {
+				if (oDic[p][i].EmpID in oDic) oDic[p][i].children = oDic[oDic[p][i].EmpID];
+			}
+		}
+		
+		return output;
+	}
+	
+	function isRIF(node) {
+		if (!node.parent) return false;
+		else {
+			if (node.isRIF && JSON.parse(node.isRIF)) return true;
+			return false;
+		}
+	}
+	
+	function isRIFSubtree(node) {
+		if (!node.parent) return false;
+		else {
+			if (node.parent.isRIF || node.isRIF) return true;
+			else return isRIFSubtree(node.parent);
+		}
+	}
+	
+	function getSize(node) {
+		if (node._children == null && node.children == null) {
+			return Number(node.count);
+		}
+		var total = 0;
+		if (node._children == null){
+			for (var i=0; i<node.children.length; i++){
+				if (!node.children[i].isRIF) total = total + getSize(node.children[i]);
+			}
+		} else {
+			for (var i=0; i<node._children.length; i++){
+				if (!node._children[i].isRIF) total = total + getSize(node._children[i]);
+			}
+		}
+		return total + Number(node.count);
+	}
+	
+	function getSalaryRollup(node) {
+		if (node._children == null && node.children == null) {
+			return Number(node.Salary);
+		}
+		var total = 0;
+		if (node._children == null){
+			for (var i=0; i<node.children.length; i++){
+				if (!node.children[i].isRIF) total = total + getSalaryRollup(node.children[i]);
+			}
+		} else {
+			for (var i=0; i<node._children.length; i++){
+				if (!node._children[i].isRIF) total = total + getSalaryRollup(node._children[i]);
+			}
+		}
+		return total + Number(node.Salary);
+	}
+	
+	function getSalaryBenchmarkRollup(node) {
+		if (node._children == null && node.children == null) {
+			return Number(node.SalaryBenchmark);
+		}
+		var total = 0;
+		if (node._children == null){
+			for (var i=0; i<node.children.length; i++){
+				if (!node.children[i].isRIF) total = total + getSalaryBenchmarkRollup(node.children[i]);
+			}
+		} else {
+			for (var i=0; i<node._children.length; i++){
+				if (!node._children[i].isRIF) total = total + getSalaryBenchmarkRollup(node._children[i]);
+			}
+		}
+		return total + Number(node.SalaryBenchmark);
+	}
+	
+	function getPerformanceRollup(node) {
+		if (node._children == null && node.children == null) {
+			return Number(node.Performance);
+		}
+		var total = 0;
+		if (node._children == null){
+			for (var i=0; i<node.children.length; i++){
+				if (!node.children[i].isRIF) total = total + getPerformanceRollup(node.children[i]);
+			}
+		} else {
+			for (var i=0; i<node._children.length; i++){
+				if (!node._children[i].isRIF) total = total + getPerformanceRollup(node._children[i]);
+			}
+		}
+		return total + Number(node.Performance);
+	}
+	
+	function getSpan(node) {
+		if (node._children == null && node.children == null) {
+			return 0;
+		}
+		var total = 0;
+		if (node._children == null){
+			for (var i=0; i<node.children.length; i++){
+				if (!node.children[i].isRIF) total = total + 1;
+			}
+		} else {
+			for (var i=0; i<node._children.length; i++){
+				if (!node._children[i].isRIF) total = total + 1;
+			}
+		}
+		return total;
+	}
+	
+	function getLayer(node) {
+		if (node.parent == null) return 1;
+		return getLayer(node.parent) + 1;
+	}
+	
+	function undoRedoValid() {
+		if (actionIdx <= 0) $("#undoBtn").prop("disabled",true);
+		else $("#undoBtn").prop("disabled",false);
+		if (actionIdx + 1 > Object.keys(actionLog).length) $("#redoBtn").prop("disabled",true);
+		else $("#redoBtn").prop("disabled",false);
+	}
+	
+	function actionTaken(newDic, newFlag) {
+		var innerDic = {};
+		var d = null; var oP = null; var nP = null; var oN = null; var nN = null; var oT = null; var nT = null; var oS = null; var nS = null; var oRIF = false; var nRIF = false;
+		d = draggingNode.EmpID;
+		if (draggingNode.isRIF) oRIF = nRIF = draggingNode.isRIF;
+		// Check whether this is a report line change or info change
+		if (!newDic) {
+			// This is a report line chnage
+			if (draggingNode.parent) expand(draggingNode.parent);
+			if (draggingNode.parent && draggingNode.parent.children) {
+				// Existing node, o/w new node
+				oP = draggingNode.parent.EmpID;
+			}
+			if (selectedNode) {
+				// Report line change, otherwise drop the subtree
+				nRIF = false;
+				// now remove the element from the parent, and insert it into the new elements children
+				if (draggingNode.parent && draggingNode.parent.children) {
+					// Existing node, o/w new node
+					var index = draggingNode.parent.children.indexOf(draggingNode);
+					if (index > -1) {
+						draggingNode.parent.children.splice(index, 1);
+					}
+				}
+				if (typeof selectedNode.children !== 'undefined' || typeof selectedNode._children !== 'undefined') {
+					if (typeof selectedNode.children !== 'undefined') {
+						selectedNode.children.push(draggingNode);
+					} else {
+						selectedNode._children.push(draggingNode);
+					}
+				} else {
+					selectedNode.children = [];
+					selectedNode.children.push(draggingNode);
+				}
+				// Based on RIF, draw the link, handle RIF list (nRIF always false)
+				// Make sure that the node being added to is expanded so user can see added node is correctly moved
+				expand(selectedNode);
+				sortTree();
+				nP = selectedNode.EmpID;
+			} else {
+				// Dropping subtree, i.e. move to RIF children list (nRIF always true)
+				nRIF = true;
+			}
+			// If this is indeed an action, i.e. parents are different, record it
+			if (oP != nP && nP || oRIF != nRIF) {
+				if (newFlag) {
+					// This is a new node, record its values
+					nN = draggingNode.EmpName; nT = draggingNode.Title; nS = draggingNode.Salary;
+				}
+				draggingNode.isRIF = nRIF;
+				actionIdx += 1;
+				innerDic["d"] = d; innerDic["oP"] = oP; innerDic["nP"] = nP; innerDic["oN"] = oN; innerDic["nN"] = nN;
+				innerDic["oT"] = oT; innerDic["nT"] = nT; innerDic["oS"] = oS; innerDic["nS"] = nS; innerDic["oRIF"] = oRIF; innerDic["nRIF"] = nRIF;
+				actionLog[actionIdx] = innerDic;
+				var uB = Object.keys(actionLog).length;
+				for (var i = actionIdx + 1; i <= uB; i++) delete actionLog[i];
+			}
+		} else {
+			// This is an info change
+			oN = draggingNode.EmpName; oT = draggingNode.Title; oS = draggingNode.Salary;
+			nN = newDic.nN; nT = newDic.nT; nS = newDic.nS;
+			draggingNode.EmpName = nN; draggingNode.Title = nT; draggingNode.Salary = nS;
+			if (oN != nN || oT != nT || oS != nS) {
+				if (draggingNode.edited) draggingNode.edited += 1;
+				else draggingNode.edited = 1;
+				actionIdx += 1;
+				innerDic["d"] = d; innerDic["oP"] = oP; innerDic["nP"] = nP; innerDic["oN"] = oN; innerDic["nN"] = nN;
+				innerDic["oT"] = oT; innerDic["nT"] = nT; innerDic["oS"] = oS; innerDic["nS"] = nS; innerDic["oRIF"] = oRIF; innerDic["nRIF"] = nRIF;
+				actionLog[actionIdx] = innerDic;
+				var uB = Object.keys(actionLog).length;
+				for (var i = actionIdx + 1; i <= uB; i++) delete actionLog[i];
+			}
+		}
+	}
+	
+	function undo() {
+		if (actionIdx > 0) {
+			draggingNode = curDic[actionLog[actionIdx]["d"]];
+			if (!actionLog[actionIdx].oN) {
+				// Report line change
+				selectedNode = curDic[actionLog[actionIdx]["oP"]];
+				var oRIF = actionLog[actionIdx]["oRIF"];
+				
+				if (draggingNode.parent) expand(draggingNode.parent);
+				if (draggingNode.parent && draggingNode.parent.children) {
+					// Existing node, o/w new node
+					oP = draggingNode.parent.EmpID;
+				}
+				if (selectedNode) {
+					// Report line change, otherwise drop the subtree
+					// now remove the element from the parent, and insert it into the new elements children
+					if (draggingNode.parent && draggingNode.parent.children) {
+						var index = draggingNode.parent.children.indexOf(draggingNode);
+						if (index > -1) {
+							draggingNode.parent.children.splice(index, 1);
+						}
+					}
+					if (typeof selectedNode.children !== 'undefined' || typeof selectedNode._children !== 'undefined') {
+						if (typeof selectedNode.children !== 'undefined') {
+							selectedNode.children.push(draggingNode);
+						} else {
+							selectedNode._children.push(draggingNode);
+						}
+					} else {
+						selectedNode.children = [];
+						selectedNode.children.push(draggingNode);
+					}
+					// Based on RIF, draw the link, handle RIF list
+					draggingNode.isRIF = oRIF;
+					// Make sure that the node being added to is expanded so user can see added node is correctly moved
+					expand(selectedNode);
+					sortTree();
+				} else {
+					// Dropping subtree, i.e. move to RIF children list (oRIF always false)
+					draggingNode.isRIF = true;
+				}
+				actionIdx = Math.max(0,actionIdx - 1);
+				update(root);
+				centerNode(draggingNode);
+				draggingNode = null;
+				selectedNode = null;
+			} else {
+				draggingNode.EmpName = actionLog[actionIdx].oN; draggingNode.Title = actionLog[actionIdx].oT; draggingNode.Salary = actionLog[actionIdx].oS;
+				if (draggingNode.edited) draggingNode.edited -= 1;
+				if (draggingNode.edited <= 0) delete draggingNode.edited;
+				actionIdx = Math.max(0,actionIdx - 1);
+				update(root);
+				centerNode(draggingNode);
+				draggingNode = null;
+			}
+		}
+	}
+	
+	function redo() {
+		actionIdx = Math.min(Object.keys(actionLog).length,actionIdx+1);
+		if (actionIdx > 0){
+			draggingNode = curDic[actionLog[actionIdx]["d"]];
+			var nRIF = curDic[actionLog[actionIdx]["nRIF"]];
+			if (!draggingNode) {
+				// this is a new node, need to be added
+				var nNode = {'EmpID':actionLog[actionIdx]["d"],'EmpName':actionLog[actionIdx]["nN"],'Title':actionLog[actionIdx]["nT"],'Salary':''+actionLog[actionIdx]["nS"],'count':'1'};
+				// Add node
+				curDic[nNode.EmpID] = nNode;
+				draggingNode = curDic[actionLog[actionIdx]["d"]];
+			}
+			if (!actionLog[actionIdx].oN) {
+				selectedNode = curDic[actionLog[actionIdx]["nP"]];
+				if (draggingNode.parent) expand(draggingNode.parent);
+				if (draggingNode.parent && draggingNode.parent.children) {
+					// Existing node, o/w new node
+					oP = draggingNode.parent.EmpID;
+				}
+				if (selectedNode) {
+					// Report line change, otherwise drop the subtree
+					if (draggingNode.parent && draggingNode.parent.children) {
+						// Existing node, o/w new node
+						oP = draggingNode.parent.EmpID;
+						var index = draggingNode.parent.children.indexOf(draggingNode);
+						if (index > -1) {
+							draggingNode.parent.children.splice(index, 1);
+						}
+					}
+					if (typeof selectedNode.children !== 'undefined' || typeof selectedNode._children !== 'undefined') {
+						if (typeof selectedNode.children !== 'undefined') {
+							selectedNode.children.push(draggingNode);
+						} else {
+							selectedNode._children.push(draggingNode);
+						}
+					} else {
+						selectedNode.children = [];
+						selectedNode.children.push(draggingNode);
+					}
+					// Based on RIF, draw the link, handle RIF list (nRIF always false)
+					draggingNode.isRIF = false;
+					// Make sure that the node being added to is expanded so user can see added node is correctly moved
+					expand(selectedNode);
+					sortTree();
+				} else {
+					// Dropping subtree, i.e. move to RIF children list (nRIF always true)
+					draggingNode.isRIF = true;
+				}
+				update(root);
+				centerNode(draggingNode);
+				draggingNode = null;
+				selectedNode = null;
+			} else {
+				draggingNode.EmpName = actionLog[actionIdx].nN; draggingNode.Title = actionLog[actionIdx].nT; draggingNode.Salary = actionLog[actionIdx].nS;
+				if (draggingNode.edited) draggingNode.edited += 1;
+				else draggingNode.edited = 1;
+				update(root);
+				centerNode(draggingNode);
+				draggingNode = null;
+			}
+		}
+	}
+	
+	function toInit(delay){
+		stopped = false;
+		if (delay === undefined) {
+			delay = 0;
+			if($("#instant").is(':checked')) delay = 0;
+			else if ($("#fast").is(':checked')) delay = 1000;
+			else if ($("#slow").is(':checked')) delay = 3000;
+		}
+		function myLoop () {
+			setTimeout(function () {
+				undo();
+				if (actionIdx > 0 && !stopped) {
+					myLoop();
+				}
+			}, delay)
+		}
+		myLoop();
+	}
+	
+	function toFuture(delay){
+		stopped = false;
+		if (delay === undefined) {
+			delay = 0;
+			if($("#instant").is(':checked')) delay = 0;
+			else if ($("#fast").is(':checked')) delay = 1000;
+			else if ($("#slow").is(':checked')) delay = 3000;
+		}
+		function myLoop () {
+			setTimeout(function () {
+				redo();
+				if (actionIdx < Object.keys(actionLog).length && !stopped) {
+					myLoop();
+				}
+			}, delay)
+		}
+		myLoop();
+	}
+	
+	function pause(){
+		stopped = true;
+	}
+	
+	function focus(nodeID) {
+		var node = null;
+		var nodes = tree.nodes(curTree).reverse();
+		nodes.forEach(function(d) {
+            if (nodeID == d.EmpID) node = d;
+        });
+		centerNode(node);
+		focusNode(node);
+	}
+	
+	function subtree(rootID, tree){
+		if (rootID == tree.EmpID) return tree;
+		if (tree.children) {
+			var result = null;
+			for (var i=0; result==null && i<tree.children.length; i++) {
+				result = subtree(rootID, tree.children[i]);
+			}
+			return result;
+		}
+	}
+	
+	function initTree(rootID, tree){
+	
+		var treeData = subtree(rootID, tree);
+		// Define the root
+		if (!treeData) {
+			alert("Invalid root ID. Please verify!");
+			curTree = root;
+			return false;
+		}
+		root = treeData;
+		root.x0 = viewerHeight / 2;
+		root.y0 = 0;
+		
+		// Call visit function to establish maxLabelLength
+		visit(treeData, function(d) {
+			totalNodes++;
+			maxLabelLength = Math.max(d.EmpName.length, maxLabelLength);
+
+		}, function(d) {
+			return d.children && d.children.length > 0 ? d.children : null;
+		});
+
+		// Layout the tree initially and center on the root node.
+		update(treeData);
+		centerNode(treeData);
+		return true;
+	}
+	
+	function changeNode() {
+		var allValid = true;
+		var warnings = "";
+		
+		var employeeName = "";
+		var title = "";
+		var salary = 0;
+		
+		// Read in inputs
+		employeeName = $("#nameOText").val();
+		title = $("#titleOText").val();
+		salary = $("#salaryOText").val();
+		// Check validity
+		if (!(!isNaN(parseFloat(salary)) && isFinite(salary))) {
+			allValid = false;
+			warnings = "Salary is not valid!";
+		}
+		
+		if (allValid) {
+			// All inputs are valid, proceed
+			// Reset value / fields
+			document.getElementById("new-node-inputs").style.display = "none";
+			contextMenuShowing = false;
+			$("#nameOText").val("");
+			$("#titleOText").val("");
+			$("#salaryOText").val("");
+			
+			// Alter node attributes
+			var newDic = {"nN":employeeName, "nT":title, "nS":salary};
+			draggingNode = pNode;
+			actionTaken(newDic, false);
+			update(root);
+			centerNode(draggingNode);
+			draggingNode = null;
+			pNode = null;
+		} else {
+			alert(warnings);
+		}
+	}
+	
+	function newNode() {
+		var allValid = true;
+		var warnings = "";
+	
+		var employeeID = "Temp0";
+		for (var i=0; i<9999999; i++){
+			var tempKey = "Temp"+i;
+			if (!(tempKey in curDic)) {
+				employeeID = tempKey;
+				break;
+			}
+		}
+		var employeeName = "";
+		var title = "";
+		var salary = 0;
+		
+		// Read in inputs
+		employeeName = $("#nameText").val();
+		title = $("#titleText").val();
+		salary = $("#salaryText").val();
+		// Check validity
+		if (!(!isNaN(parseFloat(salary)) && isFinite(salary))) {
+			allValid = false;
+			warnings = "Salary is not valid!";
+		}
+		
+		if (allValid) {
+			// All inputs are valid, proceed
+			// Reset value / fields
+			document.getElementById("new-node-inputs").style.display = "none";
+			contextMenuShowing = false;
+			$("#nameText").val("");
+			$("#titleText").val("");
+			$("#salaryText").val("");
+			
+			var nNode = {'EmpID':employeeID,'EmpName':employeeName,'Title':title,'Salary':''+salary,'count':'1'};
+			
+			// Add node
+			curDic[nNode.EmpID] = nNode;
+			draggingNode = nNode;
+			selectedNode = pNode;
+			actionTaken(null, true);
+			update(root);
+			centerNode(draggingNode);
+			draggingNode = null;
+			selectedNode = null;
+			pNode = null;
+		} else {
+			alert(warnings);
+		}
+	}
+	
+	function cancelNewNode() {
+		// Reset value / fields
+		document.getElementById("new-node-inputs").style.display = "none";
+		contextMenuShowing = false;
+	}
+	
+	function popupWindow(d, i){
+		if(contextMenuShowing) {
+			//d3.select(".popup").remove();
+			document.getElementById("new-node-inputs").style.display = "none";
+			contextMenuShowing = false;
+		} else {
+			contextMenuShowing = true;
+			document.getElementById("new-node-inputs").style.display = "block";
+			pNode = d;
+			for (var i=0; i<9999999; i++){
+				var tempKey = "Temp"+i;
+				if (!(tempKey in curDic)) {
+					$("#nameText").val("NewName"+i);
+					$("#titleText").val("OpenPos"+i);
+					$("#salaryText").val(0);
+					break;
+				}
+			}
+			$("#nameOText").val(pNode.EmpName);
+			$("#titleOText").val(pNode.Title);
+			$("#salaryOText").val(pNode.Salary);
+		}
+	}
+	
+	function _switch() {
+		// Panel display switch
+		if(legendShowing) {
+			document.getElementById("legendP").style.display = "none";
+			document.getElementById("controlP").style.display = "block";
+			legendShowing = false;
+		} else {
+			document.getElementById("legendP").style.display = "block";
+			document.getElementById("controlP").style.display = "none";
+			legendShowing = true;
+		}
+	}
+	
+	function updateStats() {
+		totalHeadcount = 0;
+		totalPayroll = 0;
+		totalManager = 0;
+		totalReportLine = 0;
+		totalSpan = 0;
+		totalLayer = 0;
+		visitTrue(root, function(d) {
+			d.isRIF = isRIF(d);
+			d.isRIFSubtree = isRIFSubtree(d);
+            d.Size = getSize(d);
+			d.Span = getSpan(d);
+			d.Layer = getLayer(d);
+			if (!d.isRIFSubtree) {
+				totalHeadcount++;
+				totalPayroll += parseFloat(d.Salary);
+				if (d.Span > 0) {
+					// If this person is a manager
+					totalManager += 1;
+					totalSpan += d.Span;
+				} else {
+					// If this person is an end point
+					totalReportLine += 1;
+					totalLayer += d.Layer;
+				}
+			}
+		}, function(d) {
+			return d.children && d.children.length > 0 ? d.children : null;
+		}, function(d) {
+			return d._children && d._children.length > 0 ? d._children : null;
+		});
+		
+		updateStat("totalHeadcount", totalHeadcount, 0);
+		updateStat("totalPayroll", totalPayroll, 0);
+		updateStat("totalManager", totalManager, 0);
+		updateStat("avgSpan", totalSpan/totalManager, 2);
+		updateStat("totalReportLine", totalReportLine, 0);
+		updateStat("avgLayer", totalLayer/totalReportLine, 2);
+	}
+	
+	function updateStat(fieldName, value, sigDigit) {
+		$("#"+fieldName).fadeOut(function() {
+			if (!(fieldName in statsDic)){
+				$(this).css('color', '');
+				statsDic[fieldName] = value;
+			} else {
+				if (value < statsDic[fieldName]) {
+					$(this).css('color', 'red');
+				} else if (value > statsDic[fieldName]) {
+					$(this).css('color', 'green');
+				} else $(this).css('color', '');
+			}
+			$(this).text(d3.format(",."+sigDigit+"f")(statsDic[fieldName]) + " -> " + d3.format(",."+sigDigit+"f")(value)).fadeIn();
+		});
+	}
+	
+	function saveBaseline(baseline){
+		expandAll(curTree);
+		var toSave = {};
+		nodes = tree.nodes(curTree).reverse();
+		nodes.forEach(function(d) {
+			if (!d.isRIFSubtree) {
+				toSave[d.EmpID] = {};
+				for (var key in d) {
+					if (fieldsToSave.indexOf(key) > -1) toSave[d.EmpID][key] = d[key];
+				}
+			}
+		});
+		baselineLog[baseline] = [{"totalHeadcount":totalHeadcount,"totalPayroll":totalPayroll,"totalManager":totalManager,"avgSpan":totalSpan/totalManager,
+		"totalReportLine":totalReportLine,"avgLayer":totalLayer/totalReportLine},toSave];
+	}
+	
+	function changeBaseline(){
+		var baseline = $(savedBaseline).val();
+		statsDic = JSON.parse(JSON.stringify(baselineLog[baseline]))[0];
+		curBaseline = baseline;
+		updateStats();
+		update(root);
+	}
+	
+	function saveToImage(imgName) {
+		// Save current org tree
+		var toSaveActions = JSON.parse(JSON.stringify(actionLog));
+		var toSaveActionIdx = actionIdx;
+		var uB = Object.keys(toSaveActions).length;
+		for (var i = toSaveActionIdx + 1; i <= uB; i++) delete toSaveActions[i];
+		treeLog[imgName] = [toSaveActions, toSaveActionIdx];
+		saveBaseline(imgName);
+	}
+	
+	function _saveToImage() {
+		if (!$(imgName).val()) {
+			alert("Image name can't be empty!");
+		} else {
+			saveToImage($(imgName).val());
+			if ($("#savedTreeImage option[value='"+$(imgName).val()+"']").length <= 0) {
+				$('#savedTreeImage').append($('<option>', {
+					value: $(imgName).val(),
+					text: $(imgName).val()
+				}));
+			}
+			if ($("#savedBaseline option[value='"+$(imgName).val()+"']").length <= 0) {
+				$('#savedBaseline').append($('<option>', {
+					value: $(imgName).val(),
+					text: $(imgName).val()
+				}));
+			}
+		}
+	}
+	
+	function revertToImage() {
+		// Read previous saved tree
+		var imgName = $(savedTreeImage).val();
+		while (actionIdx > 0) undo();
+		actionLog = JSON.parse(JSON.stringify(treeLog[imgName][0]));
+		actionIdx = 0;
+		while (actionIdx < treeLog[imgName][1]) redo();
+		undoRedoValid();
+	}
+	
+	function exportActions() {
+		//nodes = tree.nodes(curTree).reverse();
+		//nodes.forEach(function(d) {
+		//	for (var key in d) {
+		//		if (fieldsToSave.indexOf(key) == -1) delete d[key];
+		//	}
+		//});
+		//$(treeText).val(JSON.stringify(curTree));
+		var toSaveActions = JSON.parse(JSON.stringify(actionLog));
+		var toSaveActionIdx = actionIdx;
+		var uB = Object.keys(toSaveActions).length;
+		for (var i = toSaveActionIdx + 1; i <= uB; i++) delete toSaveActions[i];
+		$(actionText).val("["+JSON.stringify(toSaveActions)+","+toSaveActionIdx+"]");
+	}
+	
+	function importActions() {
+		if ($(actionText).val()) {
+			//curTree = JSON.parse($(actionText).val());
+			while (actionIdx > 0) undo();
+			actionLog = JSON.parse($(actionText).val())[0];
+			actionIdx = 0;
+			while (actionIdx < JSON.parse($(actionText).val())[1]) redo();
+			undoRedoValid();
+		}
+	}
+	
+	function exportTree() {
+		expandAll(curTree);
+		//if (!$('#showRIFs').is(':checked')) {
+		//	showRIFs();
+		//	$('#showRIFs').prop('checked', true);
+		//}
+		if($("#csv").is(':checked')) $(treeText).val(jsonToCsv(curTree,fieldsToSaveCsv));
+		else {
+			nodes = tree.nodes(curTree).reverse();
+			nodes.forEach(function(d) {
+				for (var key in d) {
+					if (fieldsToSaveJson.indexOf(key) == -1) delete d[key];
+				}
+			});
+			$(treeText).val(JSON.stringify(curTree));
+		}
+		//initTree(curTree.EmpID, curTree);
+		//curDic = {};
+		//nodes = tree.nodes(curTree).reverse();
+		//nodes.forEach(function(d) {
+		//	curDic[d.EmpID] = d;
+		//});
+	}
+	
+	function importTree() {
+		if ($(treeText).val()) {
+			$('#showRIFs').prop('checked', true);
+			if($("#csv").is(':checked')) curTree = csvToJson($(treeText).val());
+			else curTree = JSON.parse($(treeText).val());
+			actionLog = {};
+			actionIdx = 0;
+			var goodToGo = initTree($(rootText).val(), curTree);
+			if (goodToGo) {
+				update(root);
+				curDic = {};
+				nodes = tree.nodes(curTree).reverse();
+				nodes.forEach(function(d) {
+					curDic[d.EmpID] = d;
+				});
+				
+				actionLog = {}; baselineLog = {}; treeLog = {};
+				
+				saveToImage("census");
+				saveBaseline("census");
+				
+				undoRedoValid();
+
+				statsDic = JSON.parse(JSON.stringify(baselineLog["census"]))[0];
+				curBaseline = "census";
+				updateStats();
+				update(root);
+				
+				// Clear saved actions
+				$(imgName).val("");
+				$("#savedTreeImage option[value!='census']").remove();
+				$("#savedBaseline option[value!='census']").remove();
+			}
+		}
+	}
+
+    // A recursive helper function for performing some setup by walking through all nodes
+
+    function visit(parent, visitFn, childrenFn) {
+        if (!parent) return;
+
+        visitFn(parent);
+
+        var children = childrenFn(parent);
+        if (children) {
+            var count = children.length;
+            for (var i = 0; i < count; i++) {
+                visit(children[i], visitFn, childrenFn);
+            }
+        }
+    }
+	
+	// Including collapsed nodes
+	function visitTrue(parent, visitFn, childrenFn, _childrenFn) {
+        if (!parent) return;
+
+        visitFn(parent);
+
+        var children = childrenFn(parent);
+		var _children = _childrenFn(parent);
+        if (children) {
+            var count = children.length;
+            for (var i = 0; i < count; i++) {
+                visitTrue(children[i], visitFn, childrenFn, _childrenFn);
+            }
+        }
+		if (_children) {
+            var count = _children.length;
+            for (var i = 0; i < count; i++) {
+                visitTrue(_children[i], visitFn, childrenFn, _childrenFn);
+            }
+        }
+    }
+
+    // sort the tree according to the node names
+
+    function sortTree() {
+        tree.sort(function(a, b) {
+            return b.EmpName.toLowerCase() < a.EmpName.toLowerCase() ? 1 : -1;
+        });
+    }
+
+    // TODO: Pan function, can be better implemented.
+
+    function pan(domNode, direction) {
+        var speed = panSpeed;
+        if (panTimer) {
+            clearTimeout(panTimer);
+            translateCoords = d3.transform(svgGroup.attr("transform"));
+            if (direction == 'left' || direction == 'right') {
+                translateX = direction == 'left' ? translateCoords.translate[0] + speed : translateCoords.translate[0] - speed;
+                translateY = translateCoords.translate[1];
+            } else if (direction == 'up' || direction == 'down') {
+                translateX = translateCoords.translate[0];
+                translateY = direction == 'up' ? translateCoords.translate[1] + speed : translateCoords.translate[1] - speed;
+            }
+            scaleX = translateCoords.scale[0];
+            scaleY = translateCoords.scale[1];
+            scale = zoomListener.scale();
+            svgGroup.transition().attr("transform", "translate(" + translateX + "," + translateY + ")scale(" + scale + ")");
+            d3.select(domNode).select('g.node').attr("transform", "translate(" + translateX + "," + translateY + ")");
+            zoomListener.scale(zoomListener.scale());
+            zoomListener.translate([translateX, translateY]);
+            panTimer = setTimeout(function() {
+                pan(domNode, speed, direction);
+            }, 50);
+        }
+    }
+
+    // Define the zoom function for the zoomable tree
+
+    function zoom() {
+        svgGroup.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+    }
+
+    function initiateDrag(d, domNode) {
+        draggingNode = d;
+        d3.select(domNode).select('.ghostCircle').attr('pointer-events', 'none');
+        d3.selectAll('.ghostCircle').attr('class', 'ghostCircle show');
+        d3.select(domNode).attr('class', 'node activeDrag');
+
+        svgGroup.selectAll("g.node").sort(function(a, b) { // select the parent and sort the path's
+            if (a.id != draggingNode.id) return 1; // a is not the hovered element, send "a" to the back
+            else return -1; // a is the hovered element, bring "a" to the front
+        });
+        // if nodes has children, remove the links and nodes
+        if (nodes.length > 1) {
+            // remove link paths
+            links = tree.links(nodes);
+            nodePaths = svgGroup.selectAll("path.link")
+                .data(links, function(d) {
+                    return d.target.id;
+                }).remove();
+            // remove child nodes
+            nodesExit = svgGroup.selectAll("g.node")
+                .data(nodes, function(d) {
+                    return d.id;
+                }).filter(function(d, i) {
+                    if (d.id == draggingNode.id) {
+                        return false;
+                    }
+                    return true;
+                }).remove();
+        }
+
+        // remove parent link
+        parentLink = tree.links(tree.nodes(draggingNode.parent));
+        svgGroup.selectAll('path.link').filter(function(d, i) {
+            if (d.target.id == draggingNode.id) {
+                return true;
+            }
+            return false;
+        }).remove();
+
+        dragStarted = null;
+    }
+
+    function endDrag() {
+        selectedNode = null;
+        d3.selectAll('.ghostCircle').attr('class', 'ghostCircle');
+        d3.select(domNode).attr('class', 'node');
+        // now restore the mouseover event or we won't be able to drag a 2nd time
+        d3.select(domNode).select('.ghostCircle').attr('pointer-events', '');
+        updateTempConnector();
+        if (draggingNode !== null) {
+            update(root);
+            centerNode(draggingNode);
+            draggingNode = null;
+        }
+    }
+
+    // Helper functions for collapsing and expanding nodes.
+
+	function collapseOne(d) {
+        if (d.children) {
+            d._children = d.children;
+            //d._children.forEach(collapse);
+            delete d.children;
+        }
+    }
+	
+	function expandOne(d) {
+        if (d._children) {
+            d.children = d._children;
+            //d.children.forEach(expand);
+            delete d._children;
+        }
+    }
+	
+    function collapse(d) {
+        if (d.children) {
+            d._children = d.children;
+            d._children.forEach(collapse);
+            delete d.children;
+        }
+    }
+
+    function expand(d) {
+        if (d._children) {
+            d.children = d._children;
+            d.children.forEach(expand);
+            delete d._children;
+        }
+    }
+	
+	function expandAll(d) {
+		if (d.children) {
+			d.children.forEach(collapse);
+			d.children.forEach(expand);
+		}
+		else expand(d);
+    }
+	
+	function _expandAll() {
+		expandAll(root);
+		update(root);
+	}
+	
+	function _collapseAll() {
+		collapse(root);
+		update(root);
+	}
+
+    // Function to center node when clicked/dropped so node doesn't get lost when collapsing/moving with large amount of children.
+
+    function centerNode(source) {
+        scale = zoomListener.scale();
+        x = -source.y0;
+        y = -source.x0;
+        x = x * scale + viewerWidth / 2;
+        y = y * scale + viewerHeight / 2;
+        d3.select('g').transition()
+            .duration(duration)
+            .attr("transform", "translate(" + x + "," + y + ")scale(" + scale + ")");
+        zoomListener.scale(scale);
+        zoomListener.translate([x, y]);
+    }
+	
+	function focusNode(source) {
+		$("#"+source.id).delay(duration).fadeOut(duration/2).fadeIn(duration/2).fadeOut(duration/2).fadeIn('slow');
+    }
+	
+	// Toggle hide / show RIFs
+	function _toggleShowRIFs(){
+		update(curTree);
+	}
+
+	function showRIFs(){
+		var RIFs = {};
+		for (var key in curDic) {
+			if (curDic[key].isRIFSubtree) RIFs[key] = curDic[key];
+		}
+		for (var key in RIFs) {
+			var node = RIFs[key];
+			var collapsed = false;
+			if (node.parent) {
+				if (node.parent._children) collapsed = true;
+				expandOne(node.parent);
+			}
+			// now bring them back
+			if (node.parent && node.isRIF) {
+				if (!node.parent.children) node.parent.children = [];
+				var index = node.parent.children.indexOf(node);
+				if (index <= -1) node.parent.children.push(node);
+			}
+			if (node.parent && collapsed) collapseOne(node.parent); 
+		}
+		
+	}
+	
+	function hideRIFs(){
+		var RIFs = {};
+		for (var key in curDic) {
+			if (curDic[key].isRIFSubtree) RIFs[key] = curDic[key];
+		}
+		for (var key in RIFs) {
+			var node = RIFs[key];
+			var collapsed = false;
+			if (node.parent) {
+				if (node.parent._children) collapsed = true;
+				expandOne(node.parent);
+			}
+			// now remove the element from the parent, and insert it into the new elements children
+			if (node.parent && node.parent.children && node.isRIF) {
+				var index = node.parent.children.indexOf(node);
+				if (index > -1) {
+					node.parent.children.splice(index, 1);
+				}
+			}
+			if (node.parent && collapsed) collapseOne(node.parent); 
+		}
+	}
+	
+	function RIFsDisplay() {
+		// Show or hide RIFs
+		if ($('#showRIFs').is(':checked')) {
+			showRIFs();
+		} else {
+			hideRIFs();
+		}
+	}
+	
+	function highlight(d) {
+		if (d.highlighted) d.highlighted = false;
+		else d.highlighted = true;
+	}
+	
+	function filterByCriteria(obj) {
+		eval("expression");
+	}
+
+    // Toggle children function
+
+    function toggleChildren(d) {
+        if (d.children) {
+            d._children = d.children;
+            delete d.children;
+        } else if (d._children) {
+            d.children = d._children;
+            delete d._children;
+        }
+        return d;
+    }
+	
+    // Toggle children on click.
+
+    function click(d) {
+        if (d3.event.defaultPrevented) return; // click suppressed
+        d = toggleChildren(d);
+        update(d);
+        centerNode(d);
+    }
+
+    function update(source) {
+        // Compute the new height, function counts total children of root node and sets tree height accordingly.
+        // This prevents the layout looking squashed when new nodes are made visible or looking sparse when nodes are removed
+        // This makes the layout more consistent.
+        var levelWidth = [1];
+        var childCount = function(level, n) {
+
+            if (n.children && n.children.length > 0) {
+                if (levelWidth.length <= level + 1) levelWidth.push(0);
+
+                levelWidth[level + 1] += n.children.length;
+                n.children.forEach(function(d) {
+                    childCount(level + 1, d);
+                });
+            }
+        };
+		
+		// Update statistics (fields)
+		var nodes = tree.nodes(root).reverse();
+		updateStats();
+		RIFsDisplay();
+		
+		// Compute the new tree layout.
+		childCount(0, root);
+        var newHeight = d3.max(levelWidth) * 25; // 25 pixels per line  
+        tree = tree.size([newHeight, viewerWidth]);
+		nodes = tree.nodes(root).reverse();
+        var	links = tree.links(nodes);
+		var searchItems = [];
+
+        // Set widths between levels based on maxLabelLength.
+        nodes.forEach(function(d) {
+            d.y = (d.depth * (Math.max(maxLabelLength * 10,300))); //maxLabelLength * 10px
+            // alternatively to keep a fixed scale one can set a fixed depth per level
+            // Normalize for fixed-depth by commenting out below line
+            // d.y = (d.depth * 500); //500px per level.
+			
+			// update search item
+			searchItems.push({'id':d.EmpID,'text':d.EmpName});
+        });
+		
+		// Search Employee
+		{
+			$("#search").select2({
+				data: searchItems,
+				containerCssClass: "search"
+			});
+		}
+		
+        // Update the nodes…
+        node = svgGroup.selectAll("g.node")
+            .data(nodes, function(d) {
+                return d.id || (d.id = ++i);
+            });
+
+        // Enter any new nodes at the parent's previous position.
+        var nodeEnter = node.enter()
+			.append("g")
+            .call(dragListener)
+            .attr("class", "node")
+            .attr("transform", function(d) {
+                return "translate(" + source.y0 + "," + source.x0 + ")";
+            })
+			.attr("id",function(d) {
+				return d.id;
+			})
+            .on('click', click)
+			.on("contextmenu", function (d, i) {
+				d3.event.preventDefault();
+				// Popup window asking for new node info
+				popupWindow(d,i);
+			});
+
+        nodeEnter.append("circle")
+            .attr('class', 'nodeCircle')
+            .attr("r", 0)
+            .style("fill", function(d) {
+                return d._children ? "lightsteelblue" : "#fff";
+            });
+
+        nodeEnter.append("text")
+            .attr("x", function(d) {
+                return d.children || d._children ? -10 : 10;
+            })
+            .attr("dy", ".35em")
+            .attr('class', 'nodeText')
+            .attr("text-anchor", function(d) {
+                return d.children || d._children ? "end" : "start";
+            })
+            .text(function(d) {
+                return d.EmpName;
+            })
+            .style("fill-opacity", 0);
+
+        // phantom node to give us mouseover in a radius around it
+        nodeEnter.append("circle")
+            .attr('class', 'ghostCircle')
+            .attr("r", 30)
+            .attr("opacity", 0.2) // change this to zero to hide the target area
+        .style("fill", "red")
+            .attr('pointer-events', 'mouseover')
+            .on("mouseover", function(node) {
+                overCircle(node);
+            })
+            .on("mouseout", function(node) {
+                outCircle(node);
+            });
+
+        // Update the text to reflect whether node has children or not.
+        node.select('text')
+            .attr("x", function(d) {
+                return d.children || d._children ? -10 : 10;
+            })
+            .attr("text-anchor", function(d) {
+                return d.children || d._children ? "end" : "start";
+            })
+            .text(function(d) {
+                return d.EmpName;
+            })
+			.on('mouseover', tip.show)
+			.on('mouseout', tip.hide);
+
+        // Change the circle fill depending on whether it has children and is collapsed
+        node.select("circle.nodeCircle")
+            .attr("r", function(d) {
+				var radius = 4.5;
+				if (d.highlighted) radius = 6;
+				return radius;
+			})
+            .style("fill", function(d) {
+				var col = "#fff"
+				if (d._children) {
+					// Collapsed
+					if (d.Salary/d.SalaryBenchmark > 1.2) {
+						if (d.Performance <= 60) col = "rgb(128,0,0)";
+						else col = "rgb(185,185,0)";
+					}
+					else col = "lightsteelblue";
+				} else {
+					if (d.Salary/d.SalaryBenchmark > 1.2) {
+						if (d.Performance <= 60) col = "rgb(255,128,128)";
+						else col = "rgb(255,255,128)";
+					}
+					else col = "#fff";
+				}
+                return col;
+            })
+			.style("stroke", function(d) {
+				//var baseline = $(savedBaseline).val();
+				var col = null;
+				for (var key in d) {
+					if (baselineLog[curBaseline]) {
+						if (!baselineLog[curBaseline][1][d.EmpID]) col = "red";
+						else if (fieldsToSave.indexOf(key) > -1 && baselineLog[curBaseline][1][d.EmpID][key] != d[key]) col = "orange";
+						//else if (d.isRIF) col = "yellow";
+					} 
+				}
+                return col;
+            })
+			.on('mouseover', tip.show)
+			.on('mouseout', tip.hide);
+
+        // Transition nodes to their new position.
+        var nodeUpdate = node.transition()
+            .duration(duration)
+            .attr("transform", function(d) {
+                return "translate(" + d.y + "," + d.x + ")";
+            });
+
+        // Fade the text in
+        nodeUpdate.select("text")
+            .style("fill-opacity", 1);
+
+        // Transition exiting nodes to the parent's new position.
+        var nodeExit = node.exit().transition()
+            .duration(duration)
+            .attr("transform", function(d) {
+                return "translate(" + source.y + "," + source.x + ")";
+            })
+            .remove();
+
+        nodeExit.select("circle")
+            .attr("r", 0);
+
+        nodeExit.select("text")
+            .style("fill-opacity", 0);
+
+        // Update the links…
+        var link = svgGroup.selectAll("path.link")
+            .data(links, function(d) {
+                return d.target.id;
+            });
+
+        // Enter any new links at the parent's previous position.
+        link.enter().insert("path", "g")
+            .attr("class", "link")
+            .attr("d", function(d) {
+                var o = {
+                    x: source.x0,
+                    y: source.y0
+                };
+                return diagonal({
+                    source: o,
+                    target: o
+                });
+            });
+
+        // Transition links to their new position.
+        link.transition()
+            .duration(duration)
+            .attr("d", diagonal)
+			.style("stroke", function(d) {
+				//alert(d.target.isRIF);
+				if (d.target.isRIF) return "red";
+				//else return "gray";
+			})
+			.style("stroke-dasharray", function(d) {
+				//alert(d.target.isRIF);
+				if (d.target.isRIF) return ("3, 3");
+				else return ("0, 0");
+			});
+
+        // Transition exiting nodes to the parent's new position.
+        link.exit().transition()
+            .duration(duration)
+            .attr("d", function(d) {
+                var o = {
+                    x: source.x,
+                    y: source.y
+                };
+                return diagonal({
+                    source: o,
+                    target: o
+                });
+            })
+            .remove();
+
+        // Stash the old positions for transition.
+        nodes.forEach(function(d) {
+            d.x0 = d.x;
+            d.y0 = d.y;
+        });
+		
+
+		//toggleShowRIFs();
+		undoRedoValid();
+		svgGroup.call(tip);
+    }
+	
+// Main
+{	
+	// Tooltips
+	var temp = null;
+	var offsetX = -10;
+	var tip = d3.tip()
+	.attr('class', 'd3-tip')
+	.offset(function() {
+	  return [offsetX, 0]
+	})
+	.html(function(d) {
+		return tooltipOnNode(d);
+	});
+	
+	// # of actions taken: use to track actions
+	var actionIdx = 0;
+	var actionLog = {}; // node, old/new parent, old/new employee, old/new title, old/new salary
+	var curDic = {};
+	var nodes = null;
+	var curBaseline = "census";
+    // Calculate total nodes, max label length
+    var totalNodes = 0;
+	var maxLabelLength = 0;
+	// Statistics to display
+	var totalHeadcount = 0;
+	var totalPayroll = 0;
+	var totalManager = 0;
+	var totalReportLine = 0;
+	var totalSpan = 0;
+	var totalLayer = 0;
+	// Store the last statistics for comparison
+	var statsDic = {};
+	var baselineLog = {};
+	var treeLog = {};
+	var fieldsToSaveJson = ["EmpID","EmpName","Title","Salary","Performance","SalaryBenchmark","count","children","isRIF"];
+	var fieldsToSaveCsv = ["EmpID","EmpName","Title","Salary","Performance","SalaryBenchmark","count","parent","isRIF"];
+	var fieldsToSave = ["EmpName","Title","Salary"];
+    // variables for drag/drop
+    var selectedNode = null;
+    var draggingNode = null;
+	var pNode = null;
+	var contextMenuShowing = false;
+	var legendShowing = true;
+	var stopped = true;
+    // panning variables
+    var panSpeed = 200;
+    var panBoundary = 20; // Within 20px from edges will pan when dragging.
+    // Misc. variables
+    var i = 0;
+    var duration = 750;
+    var root;
+
+    // size of the diagram
+    var viewerWidth = $(document).width()-330;
+    var viewerHeight = $(document).height();
+	
+
+    var tree = d3.layout.tree()
+        .size([viewerHeight, viewerWidth]);
+
+    // define a d3 diagonal projection for use by the node paths later on.
+    var diagonal = d3.svg.diagonal()
+        .projection(function(d) {
+            return [d.y, d.x];
+        });
+	
+	// Sort the tree initially incase the JSON isn't in a sorted order.
+    sortTree();
+	
+	// define the zoomListener which calls the zoom function on the "zoom" event constrained within the scaleExtents
+    var zoomListener = d3.behavior.zoom().scaleExtent([0.1, 3]).on("zoom", zoom);
+	
+	// define the baseSvg, attaching a class for styling and the zoomListener
+    var baseSvg = d3.select("#tree-container").append("svg")
+        .attr("width", viewerWidth)
+        .attr("height", viewerHeight)
+        .attr("class", "overlay")
+        .call(zoomListener)
+		.on("dblclick.zoom", null);
+
+
+    // Define the drag listeners for drag/drop behaviour of nodes.
+    dragListener = d3.behavior.drag()
+        .on("dragstart", function(d) {
+			tip.hide(d);
+            if (d == root) return;
+            dragStarted = true;
+            nodes = tree.nodes(d);
+            d3.event.sourceEvent.stopPropagation();
+            // it's important that we suppress the mouseover event on the node being dragged. Otherwise it will absorb the mouseover event and the underlying node will not detect it d3.select(this).attr('pointer-events', 'none');
+        })
+        .on("drag", function(d) {
+			tip.hide(d);
+            if (d == root) return;
+            if (dragStarted) {
+                domNode = this;
+                initiateDrag(d, domNode);
+            }
+
+            // get coords of mouseEvent relative to svg container to allow for panning
+            relCoords = d3.mouse($('svg').get(0));
+            if (relCoords[0] < panBoundary) {
+                panTimer = true;
+                pan(this, 'left');
+            } else if (relCoords[0] > ($('svg').width() - panBoundary)) {
+
+                panTimer = true;
+                pan(this, 'right');
+            } else if (relCoords[1] < panBoundary) {
+                panTimer = true;
+                pan(this, 'up');
+            } else if (relCoords[1] > ($('svg').height() - panBoundary)) {
+                panTimer = true;
+                pan(this, 'down');
+            } else {
+                try {
+                    clearTimeout(panTimer);
+                } catch (e) {
+
+                }
+            }
+
+            d.x0 += d3.event.dy;
+            d.y0 += d3.event.dx;
+            var node = d3.select(this);
+            node.attr("transform", "translate(" + d.y0 + "," + d.x0 + ")");
+            updateTempConnector();
+        }).on("dragend", function(d) {
+			tip.hide(d);
+            if (d == root) return;
+            domNode = this;
+			if (draggingNode) actionTaken(null, false);
+			endDrag();
+        });
+
+    var overCircle = function(d) {
+        selectedNode = d;
+        updateTempConnector();
+    };
+    var outCircle = function(d) {
+        selectedNode = null;
+        updateTempConnector();
+    };
+
+    // Function to update the temporary connector indicating dragging affiliation
+    var updateTempConnector = function() {
+        var data = [];
+        if (draggingNode !== null && selectedNode !== null) {
+            // have to flip the source coordinates since we did this for the existing connectors on the original tree
+            data = [{
+                source: {
+                    x: selectedNode.y0,
+                    y: selectedNode.x0
+                },
+                target: {
+                    x: draggingNode.y0,
+                    y: draggingNode.x0
+                }
+            }];
+        }
+        var link = svgGroup.selectAll(".templink").data(data);
+
+        link.enter().append("path")
+            .attr("class", "templink")
+            .attr("d", d3.svg.diagonal())
+            .attr('pointer-events', 'none');
+
+        link.attr("d", d3.svg.diagonal());
+
+        link.exit().remove();
+    };	
+
+    // Append a group which holds all nodes and which the zoom Listener can act upon.
+    var svgGroup = baseSvg.append("g");
+	
+	// Initialize the tree
+	initTree(curTree.EmpID, curTree);
+	// Data to dictionary (for easy reference later on)
+	nodes = tree.nodes(curTree).reverse();
+	nodes.forEach(function(d) {
+		curDic[d.EmpID] = d;
+	});
+	
+	$("#search").on("select2-selecting", function(e) {
+		if(e.object.id){
+			// found! do something!
+			focus(e.object.id);
+			//alert(e.object.id);
+		}
+		else{
+			// not found, pop up alert!
+			alert(e.object.text+" not found!");
+		}
+	});
+			
+	$("#search").on('select2-removed', function(e) {
+		if(e.object.EmpID){
+			// found! do something!
+			//focus(e.object.EmpID);
+		}
+		else{
+			// not found, pop up alert!
+			alert(e.object.text+" not found!");
+		}
+	});
+	
+	saveToImage("census");
+	saveBaseline("census");
+	
+	undoRedoValid();
+}
+
+//File Reader
+{
+  var reader;
+  var progress = document.querySelector('.percent');
+
+  function abortRead() {
+    reader.abort();
+  }
+
+  function errorHandler(evt) {
+    switch(evt.target.error.code) {
+      case evt.target.error.NOT_FOUND_ERR:
+        alert('File Not Found!');
+        break;
+      case evt.target.error.NOT_READABLE_ERR:
+        alert('File is not readable');
+        break;
+      case evt.target.error.ABORT_ERR:
+        break; // noop
+      default:
+        alert('An error occurred reading this file.');
+    };
+  }
+
+  function updateProgress(evt) {
+    // evt is an ProgressEvent.
+    if (evt.lengthComputable) {
+      var percentLoaded = Math.round((evt.loaded / evt.total) * 100);
+      // Increase the progress bar length.
+      if (percentLoaded < 100) {
+        progress.style.width = percentLoaded + '%';
+        progress.textContent = percentLoaded + '%';
+      }
+    }
+	$(treeText).val(reader.result);
+  }
+
+  function handleFileSelect(evt) {
+	$(treeText).val("");
+    // Reset progress indicator on new file selection.
+    progress.style.width = '0%';
+    progress.textContent = '0%';
+
+    reader = new FileReader();
+    reader.onerror = errorHandler;
+    reader.onprogress = updateProgress;
+    reader.onabort = function(e) {
+      alert('File read cancelled');
+    };
+    reader.onloadstart = function(e) {
+      document.getElementById('progress_bar').className = 'loading';
+    };
+    reader.onload = function(e) {
+      // Ensure that the progress bar displays 100% at the end.
+      progress.style.width = '100%';
+      progress.textContent = '100%';
+      setTimeout("document.getElementById('progress_bar').className='';", 2000);
+    }
+
+    // Read in the image file as a binary string.
+    reader.readAsBinaryString(evt.target.files[0]);
+  }
+
+  document.getElementById('files').addEventListener('change', handleFileSelect, false);
+}
+</script>
+
+</html>
